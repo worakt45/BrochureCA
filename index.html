@@ -9,18 +9,34 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel (สำหรับแปลง JSX ใน Browser) -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Font Awesome (สำรอง) & Google Fonts -->
+    <!-- Font Awesome & Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Sarabun', sans-serif; }
         
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            border-radius: 50%; background: #3b82f6;
+            margin-top: -6px; cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer; background: #e5e7eb; border-radius: 2px;
+        }
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -40,7 +56,7 @@
     <script type="text/babel">
         const { useState, useRef } = React;
 
-        // --- ICON COMPONENTS (SVG Inline เพื่อไม่ต้องพึ่ง Library ภายนอก) ---
+        // --- ICON COMPONENTS ---
         const IconBase = ({ size = 24, className = "", children, ...props }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
                 {children}
@@ -55,6 +71,72 @@
         const MapPin = (props) => <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
         const Printer = (props) => <IconBase {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></IconBase>;
         const ImageIcon = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></IconBase>;
+        const Settings = (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+
+        // --- SUB COMPONENT: Image Control ---
+        const ImageControl = ({ label, imageKey, imageData, onUpload, onUpdateSetting }) => {
+            const [isOpen, setIsOpen] = useState(false);
+
+            return (
+                <div className="border border-gray-200 rounded-lg p-3 bg-white">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-sm font-bold text-gray-700">{label}</label>
+                        <button onClick={() => setIsOpen(!isOpen)} className="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1">
+                             <Settings size={14}/> {isOpen ? 'ปิดตัวปรับแต่ง' : 'ปรับตำแหน่ง/ขนาด'}
+                        </button>
+                    </div>
+                    
+                    <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => onUpload(e, imageKey)} 
+                        className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer mb-2" 
+                    />
+
+                    {isOpen && (
+                        <div className="bg-gray-50 p-3 rounded text-xs space-y-3 animate-fade-in">
+                            <div>
+                                <div className="flex justify-between mb-1 text-gray-500"><span>ขนาด (Zoom)</span><span>{imageData.scale}x</span></div>
+                                <input 
+                                    type="range" min="1" max="3" step="0.1" 
+                                    value={imageData.scale} 
+                                    onChange={(e) => onUpdateSetting(imageKey, 'scale', parseFloat(e.target.value))}
+                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between mb-1 text-gray-500"><span>ซ้าย-ขวา (X)</span><span>{imageData.x}%</span></div>
+                                <input 
+                                    type="range" min="0" max="100" 
+                                    value={imageData.x} 
+                                    onChange={(e) => onUpdateSetting(imageKey, 'x', parseInt(e.target.value))}
+                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between mb-1 text-gray-500"><span>บน-ล่าง (Y)</span><span>{imageData.y}%</span></div>
+                                <input 
+                                    type="range" min="0" max="100" 
+                                    value={imageData.y} 
+                                    onChange={(e) => onUpdateSetting(imageKey, 'y', parseInt(e.target.value))}
+                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    onUpdateSetting(imageKey, 'scale', 1);
+                                    onUpdateSetting(imageKey, 'x', 50);
+                                    onUpdateSetting(imageKey, 'y', 50);
+                                }}
+                                className="text-red-500 hover:underline w-full text-center mt-2"
+                            >
+                                รีเซ็ตค่าเดิม
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        };
 
         // --- MAIN APP COMPONENT ---
         const BrochureBuilder = () => {
@@ -66,10 +148,13 @@
                 location: "ซอยข้างวัด... (ระบุพิกัด)",
                 phone: "08x-xxx-xxxx",
                 lineId: "@yourlineid",
-                mainImage: "LINE_ALBUM_28112568 BE_260128_6.jpg",
-                subImage1: "LINE_ALBUM__260128_2.jpg",
-                subImage2: "LINE_ALBUM_28112568 BE_260128_5.jpg",
-                subImage3: "LINE_ALBUM_28112568 BE_260128_2.jpg",
+                images: {
+                    main: { url: "LINE_ALBUM_28112568 BE_260128_6.jpg", x: 50, y: 50, scale: 1 },
+                    sub1: { url: "LINE_ALBUM__260128_2.jpg", x: 50, y: 50, scale: 1 },
+                    sub2: { url: "LINE_ALBUM_28112568 BE_260128_5.jpg", x: 50, y: 50, scale: 1 },
+                    sub3: { url: "LINE_ALBUM_28112568 BE_260128_2.jpg", x: 50, y: 50, scale: 1 },
+                    qr: { url: "", x: 50, y: 50, scale: 1 }, // Added QR State
+                },
                 features: [
                     "บ้านสร้างใหม่ พร้อมอยู่ทันที",
                     "พื้นที่ใช้สอย 155 ตร.ม. (22.5 ตร.ว.)",
@@ -105,15 +190,31 @@
                 setData(prev => ({ ...prev, promotions: newPromotions }));
             };
 
-            const handleImageUpload = (e, fieldName) => {
+            const handleImageUpload = (e, key) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onloadend = () => {
-                        setData(prev => ({ ...prev, [fieldName]: reader.result }));
+                        setData(prev => ({
+                            ...prev,
+                            images: {
+                                ...prev.images,
+                                [key]: { ...prev.images[key], url: reader.result } // Keep existing transform settings
+                            }
+                        }));
                     };
                     reader.readAsDataURL(file);
                 }
+            };
+
+            const handleImageSetting = (key, setting, value) => {
+                setData(prev => ({
+                    ...prev,
+                    images: {
+                        ...prev.images,
+                        [key]: { ...prev.images[key], [setting]: value }
+                    }
+                }));
             };
 
             return (
@@ -128,6 +229,7 @@
                         </div>
 
                         <div className="space-y-6 pb-8 lg:pb-0">
+                            {/* Headings */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Star size={18}/> หัวข้อหลัก</h3>
                                 <div className="space-y-3">
@@ -136,6 +238,7 @@
                                 </div>
                             </div>
 
+                            {/* Price */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Gift size={18}/> ราคา</h3>
                                 <div className="grid grid-cols-2 gap-3">
@@ -144,22 +247,20 @@
                                 </div>
                             </div>
 
+                            {/* Images with Controls */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ImageIcon size={18}/> อัปโหลดรูปภาพ</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-gray-600 mb-1 font-bold">รูปหลัก (Main)</label>
-                                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'mainImage')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm text-gray-600 font-bold">รูปย่อย (3 รูป)</label>
-                                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'subImage1')} className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-gray-100 file:text-gray-700 cursor-pointer mb-2" />
-                                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'subImage2')} className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-gray-100 file:text-gray-700 cursor-pointer mb-2" />
-                                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'subImage3')} className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:bg-gray-100 file:text-gray-700 cursor-pointer" />
+                                <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><ImageIcon size={18}/> รูปภาพ</h3>
+                                <div className="space-y-3">
+                                    <ImageControl label="รูปหลัก (Main)" imageKey="main" imageData={data.images.main} onUpload={handleImageUpload} onUpdateSetting={handleImageSetting} />
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <ImageControl label="รูปย่อย 1" imageKey="sub1" imageData={data.images.sub1} onUpload={handleImageUpload} onUpdateSetting={handleImageSetting} />
+                                        <ImageControl label="รูปย่อย 2" imageKey="sub2" imageData={data.images.sub2} onUpload={handleImageUpload} onUpdateSetting={handleImageSetting} />
+                                        <ImageControl label="รูปย่อย 3" imageKey="sub3" imageData={data.images.sub3} onUpload={handleImageUpload} onUpdateSetting={handleImageSetting} />
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Features */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><CheckCircle size={18}/> รายละเอียดบ้าน</h3>
                                 {data.features.map((feat, idx) => (
@@ -167,6 +268,7 @@
                                 ))}
                             </div>
 
+                            {/* Promotions */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Gift size={18}/> โปรโมชั่น</h3>
                                 {data.promotions.map((promo, idx) => (
@@ -174,12 +276,19 @@
                                 ))}
                             </div>
 
+                            {/* Contact */}
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Phone size={18}/> ติดต่อ & ทำเล</h3>
                                 <div className="space-y-3">
                                     <input type="text" name="phone" value={data.phone} onChange={handleInputChange} placeholder="เบอร์โทร" className="w-full border p-2 rounded" />
                                     <input type="text" name="lineId" value={data.lineId} onChange={handleInputChange} placeholder="Line ID" className="w-full border p-2 rounded" />
                                     <textarea name="location" value={data.location} onChange={handleInputChange} placeholder="พิกัด/ทำเล" className="w-full border p-2 rounded h-20" />
+                                    
+                                    {/* QR Code Upload Section */}
+                                    <div className="pt-2 border-t border-gray-200 mt-2">
+                                        <label className="block text-sm text-gray-600 mb-2 font-bold">QR Code (Line)</label>
+                                        <ImageControl label="อัปโหลด QR Code" imageKey="qr" imageData={data.images.qr} onUpload={handleImageUpload} onUpdateSetting={handleImageSetting} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -192,7 +301,7 @@
                                 <div className="bg-white shadow-2xl relative flex flex-col print:shadow-none mx-auto" style={{ width: '297mm', minHeight: '420mm' }}>
                                     
                                     {/* Header */}
-                                    <div className="bg-blue-900 text-white relative pb-10 pt-12 px-10" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 85%, 0 100%)' }}>
+                                    <div className="bg-blue-900 text-white relative pb-32 pt-12 px-10" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 85%, 0 100%)' }}>
                                         <div className="absolute top-4 right-4 opacity-10"><Home size={160} /></div>
                                         <div className="text-center relative z-10">
                                             <div className="inline-block bg-yellow-400 text-blue-900 font-bold px-6 py-2 rounded-full text-2xl mb-4">
@@ -206,8 +315,18 @@
                                     {/* Main Image */}
                                     <div className="px-10 -mt-16 relative z-20 h-[450px]">
                                         <div className="w-full h-full bg-gray-200 rounded-2xl overflow-hidden shadow-2xl border-4 border-white relative">
-                                            <img src={data.mainImage || "https://placehold.co/800x600?text=Select+Image"} alt="Main House" className="w-full h-full object-cover" onError={(e) => e.target.src = "https://placehold.co/800x600?text=No+Image"} />
-                                            <div className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-6 rounded-tl-[3rem] rounded-br-xl shadow-xl transform -rotate-2 border-4 border-white">
+                                            <img 
+                                                src={data.images.main.url || "https://placehold.co/800x600?text=Select+Image"} 
+                                                alt="Main House" 
+                                                className="w-full h-full object-cover transition-all duration-200"
+                                                style={{
+                                                    objectPosition: `${data.images.main.x}% ${data.images.main.y}%`,
+                                                    transform: `scale(${data.images.main.scale})`,
+                                                    transformOrigin: 'center center'
+                                                }}
+                                                onError={(e) => e.target.src = "https://placehold.co/800x600?text=No+Image"} 
+                                            />
+                                            <div className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-6 rounded-tl-[3rem] rounded-br-xl shadow-xl transform -rotate-2 border-4 border-white z-10">
                                                 <p className="text-2xl opacity-90">ราคาประเมิน {data.evalPrice} ลบ.</p>
                                                 <p className="text-6xl font-extrabold">ขาย {data.price} ลบ.*</p>
                                             </div>
@@ -229,9 +348,19 @@
                                                 </ul>
                                             </div>
                                             <div className="w-1/2 grid grid-cols-2 gap-4">
-                                                {[data.subImage1, data.subImage2, data.subImage3].map((img, i) => (
-                                                    <div key={i} className={`rounded-xl overflow-hidden shadow-md border-2 border-gray-100 h-48 ${i === 2 ? 'col-span-2' : ''}`}>
-                                                        <img src={img || "https://placehold.co/400x300?text=No+Image"} className="w-full h-full object-cover" alt={`sub-${i}`} onError={(e) => e.target.src = "https://placehold.co/400x300?text=No+Image"} />
+                                                {['sub1', 'sub2', 'sub3'].map((key, i) => (
+                                                    <div key={key} className={`rounded-xl overflow-hidden shadow-md border-2 border-gray-100 h-48 ${i === 2 ? 'col-span-2' : ''}`}>
+                                                        <img 
+                                                            src={data.images[key].url || "https://placehold.co/400x300?text=No+Image"} 
+                                                            className="w-full h-full object-cover transition-all duration-200"
+                                                            style={{
+                                                                objectPosition: `${data.images[key].x}% ${data.images[key].y}%`,
+                                                                transform: `scale(${data.images[key].scale})`,
+                                                                transformOrigin: 'center center'
+                                                            }}
+                                                            alt={`sub-${i}`} 
+                                                            onError={(e) => e.target.src = "https://placehold.co/400x300?text=No+Image"} 
+                                                        />
                                                     </div>
                                                 ))}
                                             </div>
@@ -262,12 +391,26 @@
                                                 <span>| <MapPin className="inline mb-1 text-red-500"/> {data.location}</span>
                                             </div>
                                         </div>
-                                        <div className="bg-white p-3 rounded-xl w-48 h-48 flex items-center justify-center shadow-lg">
-                                            <div className="text-center text-gray-800">
-                                                <ImageIcon size={48} className="mx-auto mb-2 opacity-50"/>
-                                                <span className="font-bold text-sm block">แปะ QR Code</span>
-                                                <span className="text-xs text-gray-500">ที่นี่</span>
-                                            </div>
+                                        <div className="bg-white p-3 rounded-xl w-48 h-48 flex items-center justify-center shadow-lg overflow-hidden relative">
+                                            {/* QR CODE RENDER LOGIC */}
+                                            {data.images.qr.url ? (
+                                                <img 
+                                                    src={data.images.qr.url} 
+                                                    className="w-full h-full object-cover transition-all duration-200"
+                                                    style={{
+                                                        objectPosition: `${data.images.qr.x}% ${data.images.qr.y}%`,
+                                                        transform: `scale(${data.images.qr.scale})`,
+                                                        transformOrigin: 'center center'
+                                                    }}
+                                                    alt="QR Code" 
+                                                />
+                                            ) : (
+                                                <div className="text-center text-gray-800">
+                                                    <ImageIcon size={48} className="mx-auto mb-2 opacity-50"/>
+                                                    <span className="font-bold text-sm block">แปะ QR Code</span>
+                                                    <span className="text-xs text-gray-500">ที่นี่</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
